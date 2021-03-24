@@ -1,17 +1,15 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\Services\TokenService;
 use Illuminate\Http\Request;
 use App\Models\User;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Auth;
 
 class PassportAuthController extends Controller
 {
     /**
      * Registration
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     * @throws ValidationException
      */
     public function register(Request $request)
     {
@@ -27,28 +25,24 @@ class PassportAuthController extends Controller
             'password' => bcrypt($request->password)
         ]);
 
-        $token = $user->createToken('LaravelAuthApp')->accessToken;
-
-        return response()->json(['token' => $token], 200);
+        return response()->json(TokenService::generate($user), 200);
     }
 
     /**
      * Login
      * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
      */
     public function login(Request $request)
     {
-        $data = [
-            'email' => $request->email,
-            'password' => $request->password
-        ];
+        $credentials = $request->only('email', 'password');
 
-        if (auth()->attempt($data)) {
-            $token = auth()->user()->createToken('LaravelAuthApp')->accessToken;
-            return response()->json(['token' => $token], 200);
-        } else {
-            return response()->json(['error' => 'Unauthorised'], 401);
+        if (Auth::attempt($credentials)) {
+            // Authentication passed...
+            $user = Auth::user();
+
+            return response()->json(TokenService::generate($user), 200);
         }
+
+        return response('', 400);
     }
 }
